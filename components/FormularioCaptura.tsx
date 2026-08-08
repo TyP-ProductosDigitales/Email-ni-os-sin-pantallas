@@ -69,18 +69,12 @@ export default function FormularioCaptura() {
         throw new Error(data.error || 'Error desconocido');
       }
 
-      // Éxito
-      setForm({
-        nombre: '',
-        email: '',
-        enviando: false,
-        enviado: true,
-        error: null,
-      });
+      // Éxito (conserva nombre/email para el mensaje de confirmación)
+      setForm(prev => ({ ...prev, enviando: false, enviado: true, error: null }));
 
-      // Mostrar mensaje de éxito por 5 segundos
+      // Mostrar mensaje de éxito por 5 segundos, luego limpiar el formulario
       setTimeout(() => {
-        setForm(prev => ({ ...prev, enviado: false }));
+        setForm({ nombre: '', email: '', enviando: false, enviado: false, error: null });
       }, 5000);
 
     } catch (error) {

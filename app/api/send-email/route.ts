@@ -97,7 +97,7 @@ async function enviarEmailBrevo(
     },
     body: JSON.stringify({
       to: [{ email: destinatario, name: nombre }],
-      from: { email: SENDER_EMAIL, name: 'Método Calma' },
+      sender: { email: SENDER_EMAIL, name: 'Método Calma' },
       subject: plantilla.asunto,
       htmlContent: plantilla.contenido,
       tags: ['metodo-calma', tipo],
