@@ -8,18 +8,26 @@ const BREVO_API_KEY = process.env.BREVO_API_KEY!;
 const SENDER_EMAIL = 'soporte.productosdigitales.0@gmail.com';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || '*';
 
-function corsHeaders() {
+// Lista de orígenes permitidos para CORS, separados por coma en ALLOWED_ORIGINS
+// (o ALLOWED_ORIGIN en singular, por compatibilidad con el nombre anterior).
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || process.env.ALLOWED_ORIGIN || '')
+  .split(',')
+  .map(o => o.trim())
+  .filter(Boolean);
+
+function corsHeaders(origin: string | null) {
+  const allowOrigin = origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0] || '';
   return {
-    'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
+    'Access-Control-Allow-Origin': allowOrigin,
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
+    'Vary': 'Origin',
   };
 }
 
-export async function OPTIONS() {
-  return new NextResponse(null, { status: 204, headers: corsHeaders() });
+export async function OPTIONS(request: NextRequest) {
+  return new NextResponse(null, { status: 204, headers: corsHeaders(request.headers.get('origin')) });
 }
 
 interface ContactoRequest {
@@ -140,17 +148,18 @@ async function guardarContacto(email: string, nombre: string) {
 }
 
 export async function POST(request: NextRequest) {
+  const origin = request.headers.get('origin');
   try {
     const body: ContactoRequest = await request.json();
 
     if (!body.email || !body.email.includes('@')) {
-      return NextResponse.json({ error: 'Email inválido' }, { status: 400, headers: corsHeaders() });
+      return NextResponse.json({ error: 'Email inválido' }, { status: 400, headers: corsHeaders(origin) });
     }
 
     const resultGuardar = await guardarContacto(body.email, body.nombre || '');
 
     if (!resultGuardar.success) {
-      return NextResponse.json({ error: resultGuardar.mensaje }, { status: 409, headers: corsHeaders() });
+      return NextResponse.json({ error: resultGuardar.mensaje }, { status: 409, headers: corsHeaders(origin) });
     }
 
     await enviarEmailBrevo(body.email, body.nombre || 'Amigo', 'guia');
@@ -164,15 +173,16 @@ export async function POST(request: NextRequest) {
       success: true,
       mensaje: 'Email guardado y guía enviada. ¡Revisa tu inbox!',
       contacto: resultGuardar.contacto,
-    }, { headers: corsHeaders() });
+    }, { headers: corsHeaders(origin) });
   } catch (error) {
     console.error('Error:', error);
-    return NextResponse.json({ error: 'Error procesando la solicitud' }, { status: 500, headers: corsHeaders() });
+    return NextResponse.json({ error: 'Error procesando la solicitud' }, { status: 500, headers: corsHeaders(origin) });
   }
 }
 
 // Dashboard de métricas
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const origin = request.headers.get('origin');
   try {
     const { data, count } = await supabase
       .from('contactos')
@@ -183,8 +193,8 @@ export async function GET() {
       guias_enviadas: data?.filter(c => c.enviada_guia).length || 0,
       seguimiento_1_enviados: data?.filter(c => c.enviada_seguimiento_1).length || 0,
       seguimiento_2_enviados: data?.filter(c => c.enviada_seguimiento_2).length || 0,
-    }, { headers: corsHeaders() });
+    }, { headers: corsHeaders(origin) });
   } catch (error) {
-    return NextResponse.json({ error: 'Error' }, { status: 500, headers: corsHeaders() });
+    return NextResponse.json({ error: 'Error' }, { status: 500, headers: corsHeaders(origin) });
   }
 }
