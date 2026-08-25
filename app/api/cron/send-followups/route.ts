@@ -6,7 +6,11 @@ import { createClient } from '@supabase/supabase-js';
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const BREVO_API_KEY = process.env.BREVO_API_KEY!;
-const SENDER_EMAIL = 'soporte.productosdigitales.0@gmail.com';
+// soporte.productosdigitales.0@gmail.com nunca quedó verificado como remitente en Brevo
+// (Brevo lo rechazaba en silencio). Usamos el remitente ya verificado y dirigimos las
+// respuestas del cliente a soporte vía Reply-To.
+const SENDER_EMAIL = 'typ.productos.digitales@gmail.com';
+const REPLY_TO_EMAIL = 'soporte.productosdigitales.0@gmail.com';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -63,6 +67,7 @@ async function enviarEmailBrevo(
     body: JSON.stringify({
       to: [{ email: destinatario, name: nombre }],
       sender: { email: SENDER_EMAIL, name: 'Método Calma' },
+      replyTo: { email: REPLY_TO_EMAIL, name: 'Soporte Método Calma' },
       subject: plantilla.asunto,
       htmlContent: plantilla.contenido,
       tags: ['metodo-calma', tipo],
