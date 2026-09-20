@@ -92,6 +92,8 @@ export async function GET(request: NextRequest) {
       .select('*')
       .eq('enviada_guia', true)
       .eq('enviada_seguimiento_1', false)
+      // Los leads del quiz quedan fuera hasta definir sus mensajes de seguimiento propios.
+      .or('fuente.is.null,fuente.neq.quiz')
       .lt('created_at', hace3Dias.toISOString());
 
     if (seguimiento1) {
@@ -115,6 +117,7 @@ export async function GET(request: NextRequest) {
       .select('*')
       .eq('enviada_guia', true)
       .eq('enviada_seguimiento_2', false)
+      .or('fuente.is.null,fuente.neq.quiz')
       .lt('created_at', hace7Dias.toISOString());
 
     if (seguimiento2) {
