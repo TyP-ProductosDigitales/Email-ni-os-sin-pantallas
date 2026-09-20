@@ -2,6 +2,7 @@
 // Se ejecuta automáticamente cada día (ver vercel.json)
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { plantillaSeguimientoQuiz } from '../../../../lib/emails-quiz';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -17,7 +18,8 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 async function enviarEmailBrevo(
   destinatario: string,
   nombre: string,
-  tipo: 'seguimiento1' | 'seguimiento2'
+  tipo: 'seguimiento1' | 'seguimiento2' | 'quiz_seguimiento1' | 'quiz_seguimiento2',
+  custom?: { asunto: string; contenido: string }
 ) {
   const plantillas = {
     seguimiento1: {
@@ -56,7 +58,7 @@ async function enviarEmailBrevo(
     }
   };
 
-  const plantilla = plantillas[tipo];
+  const plantilla = custom ?? plantillas[tipo as 'seguimiento1' | 'seguimiento2'];
 
   const response = await fetch('https://api.brevo.com/v3/smtp/email', {
     method: 'POST',
@@ -65,7 +67,7 @@ async function enviarEmailBrevo(
       'api-key': BREVO_API_KEY,
     },
     body: JSON.stringify({
-      to: [{ email: destinatario, name: nombre }],
+      to: [nombre ? { email: destinatario, name: nombre } : { email: destinatario }],
       sender: { email: SENDER_EMAIL, name: 'Método Calma' },
       replyTo: { email: REPLY_TO_EMAIL, name: 'Soporte Método Calma' },
       subject: plantilla.asunto,
@@ -75,6 +77,41 @@ async function enviarEmailBrevo(
   });
 
   return response.ok;
+}
+
+// Seguimientos de los leads que vienen del quiz: día 2 y día 5, con el resultado y el nombre del hijo.
+// Quien compra sale de la secuencia: el webhook de Hotmart marca ambos seguimientos como enviados.
+async function seguimientoQuiz(paso: 1 | 2, dias: number) {
+  const campo = paso === 1 ? 'enviada_seguimiento_1' : 'enviada_seguimiento_2';
+  const limite = new Date(Date.now() - dias * 24 * 60 * 60 * 1000);
+
+  const { data } = await supabase
+    .from('contactos')
+    .select('*')
+    .eq('fuente', 'quiz')
+    .eq('enviada_guia', true)
+    .eq(campo, false)
+    .lt('created_at', limite.toISOString());
+
+  let enviados = 0;
+  for (const contacto of data || []) {
+    try {
+      const plantilla = plantillaSeguimientoQuiz(paso, contacto.resultado_quiz || 'L', contacto.nombre_hijo || '');
+      const ok = await enviarEmailBrevo(
+        contacto.email,
+        '',
+        paso === 1 ? 'quiz_seguimiento1' : 'quiz_seguimiento2',
+        plantilla
+      );
+      if (ok) {
+        await supabase.from('contactos').update({ [campo]: true }).eq('id', contacto.id);
+        enviados++;
+      }
+    } catch (error) {
+      console.error(`Error enviando seguimiento quiz ${paso} a ${contacto.email}:`, error);
+    }
+  }
+  return enviados;
 }
 
 export async function GET(request: NextRequest) {
@@ -87,12 +124,12 @@ export async function GET(request: NextRequest) {
   try {
     const hace3Dias = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
 
+    // Leads de la landing (guía gratuita): secuencia genérica original. Los del quiz van aparte.
     const { data: seguimiento1 } = await supabase
       .from('contactos')
       .select('*')
       .eq('enviada_guia', true)
       .eq('enviada_seguimiento_1', false)
-      // Los leads del quiz quedan fuera hasta definir sus mensajes de seguimiento propios.
       .or('fuente.is.null,fuente.neq.quiz')
       .lt('created_at', hace3Dias.toISOString());
 
@@ -134,10 +171,15 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    const quiz1 = await seguimientoQuiz(1, 2);
+    const quiz2 = await seguimientoQuiz(2, 5);
+
     return NextResponse.json({
       success: true,
       seg1_enviados: seguimiento1?.length || 0,
       seg2_enviados: seguimiento2?.length || 0,
+      quiz_dia2_enviados: quiz1,
+      quiz_dia5_enviados: quiz2,
     });
   } catch (error) {
     console.error('Error en cron:', error);
