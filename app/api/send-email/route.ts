@@ -45,6 +45,7 @@ interface ContactoRequest {
   diagnostico?: string;
   respuestas_quiz?: Record<string, unknown>;
   fuente?: string;
+  consentimiento?: boolean;
 }
 
 const FUENTES_VALIDAS = ['landing', 'quiz'];
@@ -67,6 +68,9 @@ function datosExtra(body: ContactoRequest) {
   }
   if (typeof body.fuente === 'string' && FUENTES_VALIDAS.includes(body.fuente)) {
     extra.fuente = body.fuente;
+  }
+  if (typeof body.consentimiento === 'boolean') {
+    extra.consentimiento = body.consentimiento;
   }
   return extra;
 }
