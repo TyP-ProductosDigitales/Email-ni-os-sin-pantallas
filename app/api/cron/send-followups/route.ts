@@ -5,7 +5,7 @@ import { createClient } from '@supabase/supabase-js';
 import { plantillaSeguimientoQuiz } from '../../../../lib/emails-quiz';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const SUPABASE_KEY = (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)!;
 const BREVO_API_KEY = process.env.BREVO_API_KEY!;
 // soporte.productosdigitales.0@gmail.com nunca quedó verificado como remitente en Brevo
 // (Brevo lo rechazaba en silencio). Usamos el remitente ya verificado y dirigimos las
