@@ -13,6 +13,7 @@ export const URL_LANDING = 'https://reto-21-dias-landing.vercel.app/';
 
 export const RESULTADOS_QUIZ: Record<string, {
   icon: string;
+  label: (n: string) => string;
   title: (n: string) => string;
   texto: string;
   prueba: string;
@@ -21,6 +22,7 @@ export const RESULTADOS_QUIZ: Record<string, {
 }> = {
   L: {
     icon: '🕊️',
+    label: n => `${n} necesita límites con transición`,
     title: n => `${n} no es difícil a propósito. Su cerebro necesita un límite que no lo desborde.`,
     texto: 'Cuando apagas de golpe una fuente de dopamina sin decirle qué viene después, su cerebro reacciona como si perdiera algo importante. Lo que necesita no es más firmeza: es un sistema de transición con guiones exactos para ese momento.',
     prueba: "en vez de 'se acabó el tiempo', avísale con una acción real — 'en 5 min guardamos y armamos X'.",
@@ -29,6 +31,7 @@ export const RESULTADOS_QUIZ: Record<string, {
   },
   A: {
     icon: '🎈',
+    label: n => `${n} necesita recuperar su paciencia`,
     title: n => `${n} no está enganchado. Su cerebro se acostumbró a no aburrirse nunca.`,
     texto: 'Tabletas, TV y videojuegos dan recompensa cada 5 segundos. Un juego real, cada 5 minutos. No es flojera: es habituación a la dopamina rápida. Necesita un banco de actividades por edad que le enseñe a regular el aburrimiento.',
     prueba: 'una sola actividad de 10 minutos, tú eliges, sin opciones infinitas que lo saturen.',
@@ -37,6 +40,7 @@ export const RESULTADOS_QUIZ: Record<string, {
   },
   C: {
     icon: '🤝',
+    label: n => `${n} necesita reconexión`,
     title: n => `Con ${n}, antes que límites, necesitan reencontrarse.`,
     texto: 'Cuando la pantalla ocupa la cena y el antes de dormir, poco a poco es más fácil estar con la pantalla que contigo. Lo que más rápido regula emociones en un niño no es otra regla: son 10 minutos de conexión real sin pantallas cerca (ni la tuya).',
     prueba: '10 minutos sin pantallas, él elige el juego, tú solo estás presente. Sin corregir nada.',
@@ -53,10 +57,11 @@ export function plantillaResultadoQuiz(resultado: string, nombreHijo: string, es
     : '';
   const link = `${URL_LANDING}?utm_source=email&utm_medium=quiz_resultado&utm_campaign=reto21`;
   return {
-    asunto: `${r.icon} El plan personalizado para ${nombreHijo || 'tu hijo'}: tu resultado`,
+    asunto: `${r.icon} Lo que ${nombreHijo || 'tu hijo'} necesita primero: tu resultado`,
     contenido: `
       <div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto;color:#222;line-height:1.55">
-        <p style="font-size:13px;color:#777;margin:0 0 4px">Tu plan personalizado para ${n}</p>
+        <p style="font-size:13px;color:#777;margin:0 0 4px">Resultado de ${n}</p>
+        <p style="font-weight:bold;font-size:15px;margin:0 0 10px">${r.label(n)}</p>
         <h2 style="margin:0 0 14px">${r.icon} ${r.title(n)}</h2>
         ${nota}
         <p>${r.texto}</p>
