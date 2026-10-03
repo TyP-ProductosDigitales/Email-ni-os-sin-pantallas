@@ -2,7 +2,7 @@
 // Se ejecuta automáticamente cada día (ver vercel.json)
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { plantillaSeguimientoQuiz } from '../../../../lib/emails-quiz';
+import { plantillaSeguimientoQuiz, URL_LANDING } from '../../../../lib/emails-quiz';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_KEY = (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)!;
@@ -12,8 +12,53 @@ const BREVO_API_KEY = process.env.BREVO_API_KEY!;
 // respuestas del cliente a soporte vía Reply-To.
 const SENDER_EMAIL = 'typ.productos.digitales@gmail.com';
 const REPLY_TO_EMAIL = 'soporte.productosdigitales.0@gmail.com';
+const URL_GUIA = 'https://reto-21-dias-landing.vercel.app/guia-inicial-x9k2mq7.pdf';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const boton = (href: string, texto: string) =>
+  `<p style="text-align:center;margin:24px 0"><a href="${href}" style="background:#1a6bff;color:#fff;text-decoration:none;padding:14px 22px;border-radius:8px;font-weight:bold;display:inline-block">${texto} →</a></p>`;
+
+// La base guarda "Cliente" cuando no hay nombre: no lo usamos como saludo.
+const saludo = (n: string) => (n && n !== 'Cliente' ? `Hola ${n},` : 'Hola,');
+
+const envoltura = (cuerpo: string) => `
+  <div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto;color:#222;line-height:1.55">
+    ${cuerpo}
+    <p style="font-size:12px;color:#888">Si no quieres recibir más correos, responde este mensaje con la palabra BAJA. — Equipo Niños Sin Pantallas</p>
+  </div>`;
+
+// Secuencia para leads de la landing (guía gratuita). Los del quiz tienen la suya aparte.
+// Textos en español neutro, igual que la landing.
+const SEGUIMIENTO_LANDING = {
+  seguimiento1: {
+    asunto: '¿Ya empezaste a aplicar la Guía Inicial?',
+    contenido: (nombre: string) => envoltura(`
+      <p>${saludo(nombre)} hace unos días te llegó la Guía Inicial «Niños Sin Pantallas» 🎁</p>
+      <p>Si todavía no la abriste, es buen momento. Un solo capítulo basta para entender por qué tu hijo reacciona así con las pantallas — y qué hacer distinto hoy mismo.</p>
+      ${boton(URL_GUIA, 'Ver la Guía Inicial')}
+      <p>Si ya la leíste y quieres el plan completo día a día, el Reto de 21 días te espera aquí:</p>
+      ${boton(`${URL_LANDING}?utm_source=email&utm_medium=seguimiento1&utm_campaign=reto21`, 'Ver el Reto de 21 días')}
+      <p>— Equipo Niños Sin Pantallas</p>`),
+  },
+  seguimiento2: {
+    asunto: 'El Reto de 21 días, hoy con 90% de descuento',
+    contenido: (nombre: string) => envoltura(`
+      <p>${saludo(nombre)} la Guía Inicial fue el primer paso. El Reto de 21 días, Método C.A.L.M.A., es el plan completo: día a día, con guiones para los momentos difíciles.</p>
+      <p><strong>Hoy incluye:</strong></p>
+      <ul>
+        <li>Manual de Momentos Difíciles (8 escenarios con guiones)</li>
+        <li>50 Actividades Offline por edad</li>
+        <li>Guía «Pantallas con Propósito»</li>
+        <li>Guía Co-Padres</li>
+        <li>30 días de Generador de Actividades offline</li>
+      </ul>
+      <p><strong>Precio de lanzamiento: 9.97 USD</strong> (antes 99.70 USD, 90% de descuento).</p>
+      ${boton(`${URL_LANDING}?utm_source=email&utm_medium=seguimiento2&utm_campaign=reto21`, 'Ver el Reto de 21 días')}
+      <p>Si esta semana no es el momento, no pasa nada. Este es el último correo de esta secuencia.</p>
+      <p>— Equipo Niños Sin Pantallas</p>`),
+  },
+};
 
 async function enviarEmailBrevo(
   destinatario: string,
@@ -21,44 +66,10 @@ async function enviarEmailBrevo(
   tipo: 'seguimiento1' | 'seguimiento2' | 'quiz_seguimiento1' | 'quiz_seguimiento2',
   custom?: { asunto: string; contenido: string }
 ) {
-  const plantillas = {
-    seguimiento1: {
-      asunto: '⏰ ¿Ya empezaste? Aquí van los primeros resultados',
-      contenido: `
-        <h2>Hola ${nombre},</h2>
-        <p>Espero que hayas recibido tu guía y ya hayas experimentado los primeros cambios 🌟</p>
-        <p><strong>Este es el momento crítico:</strong> Los primeros 3 días son cuando ves si el método funciona para ti.</p>
-        <p>Si aún no has empezado, aquí va un recordatorio de por dónde comenzar:</p>
-        <ol>
-          <li>Haz el ejercicio de respiración (5 minutos)</li>
-          <li>Practica con tus hijos (10 minutos)</li>
-          <li>Observa los cambios (sin presión)</li>
-        </ol>
-        <p>Si tienes preguntas, estoy aquí para ayudarte 💪</p>
-        <p>— Equipo Método Calma</p>
-      `
-    },
-    seguimiento2: {
-      asunto: '🚀 El siguiente paso: Acceso completo a Método Calma',
-      contenido: `
-        <h2>¡${nombre}, es hora del siguiente nivel!</h2>
-        <p>Si has seguido la guía durante estos días, ya notaste los cambios ¿verdad?</p>
-        <p><strong>Lo que hace la diferencia:</strong> La mayoría de personas abandona después de 3 días. Tú no. Tú seguiste adelante.</p>
-        <p>Por eso te ofrecemos acceso completo a:</p>
-        <ul>
-          <li>🎓 Módulos completos del Método Calma</li>
-          <li>📱 PLR Kids Builder (generador de actividades)</li>
-          <li>💬 Comunidad exclusiva</li>
-          <li>📞 Soporte directo</li>
-        </ul>
-        <p><strong>Tu inversión:</strong> Menos de lo que gastas en un café al día.</p>
-        <p>[BOTÓN: Ver oferta especial]</p>
-        <p>— Equipo Método Calma</p>
-      `
-    }
+  const plantilla = custom ?? {
+    asunto: SEGUIMIENTO_LANDING[tipo as 'seguimiento1' | 'seguimiento2'].asunto,
+    contenido: SEGUIMIENTO_LANDING[tipo as 'seguimiento1' | 'seguimiento2'].contenido(nombre),
   };
-
-  const plantilla = custom ?? plantillas[tipo as 'seguimiento1' | 'seguimiento2'];
 
   const response = await fetch('https://api.brevo.com/v3/smtp/email', {
     method: 'POST',
@@ -68,11 +79,11 @@ async function enviarEmailBrevo(
     },
     body: JSON.stringify({
       to: [nombre ? { email: destinatario, name: nombre } : { email: destinatario }],
-      sender: { email: SENDER_EMAIL, name: 'Método Calma' },
-      replyTo: { email: REPLY_TO_EMAIL, name: 'Soporte Método Calma' },
+      sender: { email: SENDER_EMAIL, name: 'Niños Sin Pantallas' },
+      replyTo: { email: REPLY_TO_EMAIL, name: 'Soporte Niños Sin Pantallas' },
       subject: plantilla.asunto,
       htmlContent: plantilla.contenido,
-      tags: ['metodo-calma', tipo],
+      tags: ['ninos-sin-pantallas', tipo],
     }),
   });
 

@@ -69,7 +69,7 @@ export function plantillaResultadoQuiz(resultado: string, nombreHijo: string, es
         <blockquote style="border-left:3px solid #ccc;margin:16px 0;padding:4px 14px;color:#444">"${r.testimonio.texto}"<br><small>— ${r.testimonio.autor}</small></blockquote>
         <p>Tu plan de 21 días está diseñado para bajar la sobreestimulación de ${n} y devolver la calma a tu hogar, sin culpas, sin gritos y sin sacar las pantallas de casa.</p>
         <p style="text-align:center;margin:24px 0"><a href="${link}" style="background:#1a6bff;color:#fff;text-decoration:none;padding:14px 22px;border-radius:8px;font-weight:bold;display:inline-block">${r.cta(n)} →</a></p>
-        <p style="font-size:12px;color:#888">Si tienes dudas, responde este correo. — Equipo Método Calma</p>
+        <p style="font-size:12px;color:#888">Si tienes dudas, responde este correo. — Equipo Niños Sin Pantallas</p>
       </div>
     `,
   };
@@ -78,7 +78,7 @@ export function plantillaResultadoQuiz(resultado: string, nombreHijo: string, es
 
 // ---- Seguimientos del quiz (día 2 y día 5) ----
 // Texto aprobado por Sandra el 20 de septiembre de 2026. Sin nombre de la mamá: el quiz solo pide el del hijo.
-const PIE_BAJA = '<p style="font-size:12px;color:#888">Si no quieres recibir más correos, responde este mensaje con la palabra BAJA. — Equipo Método Calma</p>';
+const PIE_BAJA = '<p style="font-size:12px;color:#888">Si no quieres recibir más correos, responde este mensaje con la palabra BAJA. — Equipo Niños Sin Pantallas</p>';
 
 export function plantillaSeguimientoQuiz(paso: 1 | 2, resultado: string, nombreHijo: string) {
   const r = RESULTADOS_QUIZ[resultado] || RESULTADOS_QUIZ.L;

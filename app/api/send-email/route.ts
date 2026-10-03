@@ -1,7 +1,7 @@
 // app/api/send-email/route.ts - Captura emails, guarda en Supabase y envía la guía vía Brevo
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { plantillaResultadoQuiz } from '../../../lib/emails-quiz';
+import { plantillaResultadoQuiz, URL_LANDING } from '../../../lib/emails-quiz';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_KEY = (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)!;
@@ -11,6 +11,8 @@ const BREVO_API_KEY = process.env.BREVO_API_KEY!;
 // respuestas del cliente a soporte vía Reply-To.
 const SENDER_EMAIL = 'typ.productos.digitales@gmail.com';
 const REPLY_TO_EMAIL = 'soporte.productosdigitales.0@gmail.com';
+// PDF público de la Guía Inicial gratuita (en la landing, con nombre no indexable y Disallow en robots.txt).
+const URL_GUIA = 'https://reto-21-dias-landing.vercel.app/guia-inicial-x9k2mq7.pdf';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -75,68 +77,36 @@ function datosExtra(body: ContactoRequest) {
   return extra;
 }
 
+// Solo dos correos se envían desde este archivo: la guía inicial (lead de la landing) y el
+// resultado del quiz. Los seguimientos viven en app/api/cron/send-followups/route.ts.
 async function enviarEmailBrevo(
   destinatario: string,
   nombre: string,
-  tipo: 'guia' | 'seguimiento1' | 'seguimiento2' | 'resultado_quiz',
+  tipo: 'guia' | 'resultado_quiz',
   custom?: { asunto: string; contenido: string }
 ) {
+  const boton = (href: string, texto: string) =>
+    `<p style="text-align:center;margin:24px 0"><a href="${href}" style="background:#1a6bff;color:#fff;text-decoration:none;padding:14px 22px;border-radius:8px;font-weight:bold;display:inline-block">${texto} →</a></p>`;
+
+  const linkLanding = `${URL_LANDING}?utm_source=email&utm_medium=guia&utm_campaign=reto21`;
+
   const plantillas = {
     guia: {
-      asunto: '🎯 Tu Guía Exclusiva - Método Calma',
+      asunto: '🎁 Tu Guía Inicial «Niños Sin Pantallas» ya está aquí',
       contenido: `
+      <div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto;color:#222;line-height:1.55">
         <h2>${nombre ? `¡Hola ${nombre}!` : '¡Hola!'}</h2>
-        <p>Gracias por tu interés en el <strong>Método Calma</strong> 🙏</p>
-        <p>Aquí está tu guía exclusiva que pediste. Te mostrará los primeros pasos para implementar el método en tu vida.</p>
-        <p><strong>Contenido de la guía:</strong></p>
-        <ul>
-          <li>✅ Principios clave del Método Calma</li>
-          <li>✅ Ejercicios prácticos para los primeros 3 días</li>
-          <li>✅ Cómo integrar con actividades de tus hijos</li>
-          <li>✅ Acceso a la app PLR Kids Builder (30 días)</li>
-        </ul>
-        <p>Si tienes dudas, responde este email 💬</p>
-        <p>¡Que disfrutes el viaje!</p>
-        <p>— Equipo Método Calma</p>
-      `
+        <p>Gracias por sumarte a Niños Sin Pantallas 💚</p>
+        <p>Aquí tienes tu Guía Inicial: 20 capítulos con la ciencia detrás de la sobreestimulación y las pantallas, basada en evidencia de la Academia Americana de Pediatría y el trabajo de la Dra. Michaeleen Doucleff (NPR).</p>
+        ${boton(URL_GUIA, 'Descargar mi Guía Inicial')}
+        <p>Es el primer paso. Cuando quieras el plan completo día a día — el Reto de 21 días, Método C.A.L.M.A. — te espera aquí:</p>
+        ${boton(linkLanding, 'Ver el Reto de 21 días')}
+        <p style="font-size:12px;color:#888">Si tienes dudas, responde este correo. — Equipo Niños Sin Pantallas</p>
+      </div>`,
     },
-    seguimiento1: {
-      asunto: '⏰ ¿Ya empezaste? Aquí van los primeros resultados',
-      contenido: `
-        <h2>Hola ${nombre},</h2>
-        <p>Espero que hayas recibido tu guía y ya hayas experimentado los primeros cambios 🌟</p>
-        <p><strong>Este es el momento crítico:</strong> Los primeros 3 días son cuando ves si el método funciona para ti.</p>
-        <p>Si aún no has empezado, aquí va un recordatorio de por dónde comenzar:</p>
-        <ol>
-          <li>Haz el ejercicio de respiración (5 minutos)</li>
-          <li>Practica con tus hijos (10 minutos)</li>
-          <li>Observa los cambios (sin presión)</li>
-        </ol>
-        <p>Si tienes preguntas, estoy aquí para ayudarte 💪</p>
-        <p>— Equipo Método Calma</p>
-      `
-    },
-    seguimiento2: {
-      asunto: '🚀 El siguiente paso: Acceso completo a Método Calma',
-      contenido: `
-        <h2>¡${nombre}, es hora del siguiente nivel!</h2>
-        <p>Si has seguido la guía durante estos días, ya notaste los cambios ¿verdad?</p>
-        <p><strong>Lo que hace la diferencia:</strong> La mayoría de personas abandona después de 3 días. Tú no. Tú seguiste adelante.</p>
-        <p>Por eso te ofrecemos acceso completo a:</p>
-        <ul>
-          <li>🎓 Módulos completos del Método Calma</li>
-          <li>📱 PLR Kids Builder (generador de actividades)</li>
-          <li>💬 Comunidad exclusiva</li>
-          <li>📞 Soporte directo</li>
-        </ul>
-        <p><strong>Tu inversión:</strong> Menos de lo que gastas en un café al día.</p>
-        <p>[BOTÓN: Ver oferta especial]</p>
-        <p>— Equipo Método Calma</p>
-      `
-    }
   };
 
-  const plantilla = custom ?? plantillas[tipo as 'guia' | 'seguimiento1' | 'seguimiento2'];
+  const plantilla = custom ?? plantillas[tipo as 'guia'];
 
   const response = await fetch('https://api.brevo.com/v3/smtp/email', {
     method: 'POST',
@@ -146,11 +116,11 @@ async function enviarEmailBrevo(
     },
     body: JSON.stringify({
       to: [nombre ? { email: destinatario, name: nombre } : { email: destinatario }],
-      sender: { email: SENDER_EMAIL, name: 'Método Calma' },
-      replyTo: { email: REPLY_TO_EMAIL, name: 'Soporte Método Calma' },
+      sender: { email: SENDER_EMAIL, name: 'Niños Sin Pantallas' },
+      replyTo: { email: REPLY_TO_EMAIL, name: 'Soporte Niños Sin Pantallas' },
       subject: plantilla.asunto,
       htmlContent: plantilla.contenido,
-      tags: ['metodo-calma', tipo],
+      tags: ['ninos-sin-pantallas', tipo],
     }),
   });
 
@@ -215,6 +185,7 @@ export async function POST(request: NextRequest) {
       );
       await enviarEmailBrevo(body.email, '', 'resultado_quiz', plantilla);
     } else {
+      // Lead de la landing: recibe la Guía Inicial gratuita.
       await enviarEmailBrevo(body.email, body.nombre || '', 'guia');
     }
 
